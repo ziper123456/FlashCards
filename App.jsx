@@ -6,7 +6,7 @@ import THEMES, {
   STORAGE_KEY_DECK,
   STORAGE_KEY_SETTINGS,
 } from "./src/themes";
-import helpers, { DEFAULT_NUMBERS } from "./src/helpers";
+import helpers, { DEFAULT_NUMBERS, SUPPORTED_LANGUAGES } from "./src/helpers";
 const { generateBaseId, normalizeText } = helpers;
 
 import Header from "./src/components/Header.jsx";
@@ -33,6 +33,16 @@ const App = () => {
     cardOpacity: 1.0,
     maxOrbitSize: 50,
     isReversed: false,
+    // TTS Settings (shared)
+    ttsPitch: 1.0,
+    ttsRate: 1.0,
+    ttsVolume: 1.0,
+    // Separate voice settings for front and back languages
+    ttsFrontVoiceURI: "",
+    ttsBackVoiceURI: "",
+    // Language Pair Settings
+    frontLang: "en_US",
+    backLang: "es_ES",
   };
   const [settings, setSettings] = useState(defaultSettings);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -94,8 +104,7 @@ const App = () => {
         DEFAULT_NUMBERS.forEach((item) => {
           const existing = deck.find(
             (c) =>
-              normalizeText(c.front) === normalizeText(item.front) &&
-              normalizeText(c.back) === normalizeText(item.back)
+              normalizeText(c.en_US) === normalizeText(item.en_US)
           );
           if (existing) {
             if (!existing.categories.includes("Numbers"))
@@ -103,9 +112,11 @@ const App = () => {
           } else {
             deck.push({
               id: currentMaxId + addedCount + 1,
-              front: item.front,
-              back: item.back,
-              categories: ["Numbers"],
+              en_US: item.en_US,
+              es_ES: item.es_ES,
+              vi_VN: item.vi_VN,
+              de_DE: item.de_DE,
+              categories: item.categories || ["Numbers"],
               studyCount: 0,
             });
             addedCount++;
@@ -200,13 +211,25 @@ const App = () => {
 
   const filteredMasterDeck = useMemo(() => {
     let result = [...masterDeck];
+
+    // Filter by selected categories
     if (selectedCategories.length > 0) {
       result = result.filter((card) =>
         (card.categories || []).some((cat) => selectedCategories.includes(cat))
       );
     }
+
+    // Filter by language pair - only include cards that have both front and back translations
+    const frontLang = settings.frontLang || "en_US";
+    const backLang = settings.backLang || "es_ES";
+    result = result.filter((card) => {
+      const hasFront = card[frontLang] && card[frontLang].trim() !== "";
+      const hasBack = card[backLang] && card[backLang].trim() !== "";
+      return hasFront && hasBack;
+    });
+
     return result;
-  }, [masterDeck, selectedCategories]);
+  }, [masterDeck, selectedCategories, settings.frontLang, settings.backLang]);
 
   const renderedDeck = useMemo(() => {
     return filteredMasterDeck.slice(0, visibleLimit);
@@ -281,23 +304,7 @@ const App = () => {
     setVisibleLimit(PAGE_SIZE);
   }, [selectedCategories, view]);
 
-  // --- TTS Helper ---
-  const speak = useCallback(
-    (text, isSpanish) => {
-      if (!ttsEnabled || !window.speechSynthesis || !text) return;
-
-      // Cancel any current speech
-      window.speechSynthesis.cancel();
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      // Simple language detection logic based on card side
-      utterance.lang = isSpanish ? "es-ES" : "en-US";
-      utterance.rate = 0.9; // Slightly slower for learning
-
-      window.speechSynthesis.speak(utterance);
-    },
-    [ttsEnabled]
-  );
+  // TTS is now handled by react-text-to-speech in LearnView
 
   // --- Session Management ---
   const getRandomPhysics = useCallback(
@@ -433,32 +440,7 @@ const App = () => {
     }
   };
 
-  // --- TTS Effect Hook for Learn Mode ---
-  useEffect(() => {
-    if (view === "learn" && orbitCards.length > 0 && !learnAnim) {
-      const card = orbitCards[0];
-      const isBack = isFlipped;
-
-      let text = "";
-      let isSpanish = false;
-
-      // Front: English (Normal) / Spanish (Reversed)
-      // Back: Spanish (Normal) / English (Reversed)
-      if (!isBack) {
-        text = settings.isReversed ? card.back : card.front;
-        isSpanish = settings.isReversed;
-      } else {
-        text = settings.isReversed ? card.front : card.back;
-        isSpanish = !settings.isReversed;
-      }
-
-      // Speak with a tiny delay to allow visual transition feel natural
-      const timer = setTimeout(() => {
-        speak(text, isSpanish);
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [view, orbitCards, isFlipped, settings.isReversed, speak, learnAnim]);
+  // TTS Effect Hook moved to LearnView component using react-text-to-speech
 
   // --- Physics Loop ---
   // Only refill if in Play modes (not Learn, learn handles its own refill in triggerLearnAction)
@@ -595,34 +577,47 @@ const App = () => {
       const newDeck = [...prev];
       let added = 0;
       let merged = 0;
+      let updated = 0;
       const currentMaxId = prev.reduce(
         (max, c) => Math.max(max, typeof c.id === "number" ? c.id : 0),
-        generateBaseId()
+        0
       );
       rawCards.forEach((rc) => {
+        // Match by en_US (primary language)
         const existingIndex = newDeck.findIndex(
-          (c) =>
-            normalizeText(c.front) === normalizeText(rc.front) &&
-            normalizeText(c.back) === normalizeText(rc.back)
+          (c) => normalizeText(c.en_US) === normalizeText(rc.en_US)
         );
         if (existingIndex !== -1) {
-          const existingCats = newDeck[existingIndex].categories || [];
-          if (!existingCats.includes(rc.category)) {
-            newDeck[existingIndex].categories = [...existingCats, rc.category];
+          // Update existing card with new translations
+          const existing = newDeck[existingIndex];
+          const existingCats = existing.categories || [];
+
+          // Merge categories
+          if (rc.category && !existingCats.includes(rc.category)) {
+            existing.categories = [...existingCats, rc.category];
             merged++;
           }
-        } else {
+
+          // Update translations if provided
+          if (rc.es_ES && rc.es_ES.trim()) existing.es_ES = rc.es_ES;
+          if (rc.vi_VN && rc.vi_VN.trim()) existing.vi_VN = rc.vi_VN;
+          if (rc.de_DE && rc.de_DE.trim()) existing.de_DE = rc.de_DE;
+          updated++;
+        } else if (rc.en_US && rc.en_US.trim()) {
+          // Add new card
           newDeck.push({
             id: currentMaxId + added + 1,
-            front: rc.front,
-            back: rc.back,
-            categories: [rc.category || "General"],
+            en_US: rc.en_US || "",
+            es_ES: rc.es_ES || "",
+            vi_VN: rc.vi_VN || "",
+            de_DE: rc.de_DE || "",
+            categories: rc.category ? [rc.category] : ["General"],
             studyCount: 0,
           });
           added++;
         }
       });
-      setImportError(`Processed: ${added} new, ${merged} category updates.`);
+      setImportError(`Processed: ${added} new, ${updated} updated, ${merged} category merges.`);
       setTimeout(() => {
         setView("menu");
         setImportError(null);
@@ -638,38 +633,42 @@ const App = () => {
     if (!trimmedInput) return;
     try {
       if (trimmedInput.startsWith("[") || trimmedInput.startsWith("{")) {
+        // JSON format
         const parsed = JSON.parse(trimmedInput);
         if (Array.isArray(parsed)) {
           newCards = parsed.map((item) => ({
-            front: (item.front || item.word || Object.keys(item)[0]).trim(),
-            back: (item.back || item.meaning || Object.values(item)[0]).trim(),
-            category: (item.category || "General").trim(),
-          }));
-        } else if (typeof parsed === "object") {
-          newCards = Object.entries(parsed).map(([key, value]) => ({
-            front: key.trim(),
-            back: String(value).trim(),
-            category: "General",
+            en_US: (item["en-US"] || item.en_US || item.front || "").trim(),
+            es_ES: (item["es-ES"] || item.es_ES || item.back || "").trim(),
+            vi_VN: (item["vi-VN"] || item.vi_VN || "").trim(),
+            de_DE: (item["de-DE"] || item.de_DE || "").trim(),
+            category: (Array.isArray(item.categories) ? item.categories[0] : item.category) || "General",
           }));
         }
       } else {
-        const lines = trimmedInput.split("\n").filter((l) => l.includes(":"));
+        // Text format: Category > EN|ES|VI|DE
+        const lines = trimmedInput.split("\n").filter((l) => l.trim());
         newCards = lines.map((line) => {
           let category = "General";
           let rest = line;
           if (line.includes(">")) {
             const parts = line.split(">");
             category = parts[0].trim();
-            rest = parts[1].trim();
+            rest = parts.slice(1).join(">").trim();
           }
-          const [front, back] = rest.split(":").map((s) => s.trim());
-          return { front, back, category };
-        });
+          const langs = rest.split("|").map((s) => s.trim());
+          return {
+            en_US: langs[0] || "",
+            es_ES: langs[1] || "",
+            vi_VN: langs[2] || "",
+            de_DE: langs[3] || "",
+            category,
+          };
+        }).filter((c) => c.en_US); // Only include cards with en_US
       }
       processNewCards(newCards);
       setInputText("");
     } catch (err) {
-      setImportError("Invalid format. Use JSON or 'Category > Front : Back'.");
+      setImportError("Invalid format. Use JSON or 'Category > EN|ES|VI|DE'.");
     }
   };
 
@@ -718,7 +717,7 @@ const App = () => {
     e.preventDefault();
     if (!activeCard || feedback === "revealing") return;
 
-    const target = settings.isReversed ? activeCard.front : activeCard.back;
+    const target = activeCard[settings.backLang || "es_ES"] || "";
     const normalizedAnswer = normalizeText(answer);
     const normalizedTarget = normalizeText(target);
 
@@ -854,7 +853,7 @@ const App = () => {
         document.execCommand("copy");
         setCopyFeedback(true);
         setTimeout(() => setCopyFeedback(false), 2000);
-      } catch (err) {}
+      } catch (err) { }
       document.body.removeChild(textArea);
     }
   };
@@ -862,12 +861,11 @@ const App = () => {
   // --- Render logic ---
   return (
     <div
-      className={`flex flex-col h-screen w-full ${
-        theme.bg
-      } ${theme.textAccent.replace(
-        "text-",
-        "text-opacity-90 text-"
-      )} font-sans overflow-hidden transition-colors duration-500`}
+      className={`flex flex-col h-screen w-full ${theme.bg
+        } ${theme.textAccent.replace(
+          "text-",
+          "text-opacity-90 text-"
+        )} font-sans overflow-hidden transition-colors duration-500`}
     >
       <Header
         theme={theme}
@@ -916,11 +914,10 @@ const App = () => {
               <div className="flex gap-2">
                 <button
                   onClick={copyToClipboard}
-                  className={`text-xs border px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
-                    copyFeedback
-                      ? "bg-emerald-600/20 border-emerald-500 text-emerald-400"
-                      : `${theme.panel} ${theme.border} text-slate-300 hover:text-white`
-                  }`}
+                  className={`text-xs border px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${copyFeedback
+                    ? "bg-emerald-600/20 border-emerald-500 text-emerald-400"
+                    : `${theme.panel} ${theme.border} text-slate-300 hover:text-white`
+                    }`}
                 >
                   {copyFeedback ? <Check size={14} /> : <Copy size={14} />}{" "}
                   {copyFeedback ? "Copied!" : "Copy JSON"}
@@ -931,6 +928,41 @@ const App = () => {
                 >
                   <Download size={14} /> Export JSON
                 </button>
+              </div>
+            </div>
+
+            {/* Language Pair Selector */}
+            <div className="mb-6 flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Study:</span>
+                <div className="flex items-center gap-1">
+                  <select
+                    value={settings.frontLang || "en_US"}
+                    onChange={(e) => updateSetting("frontLang", e.target.value)}
+                    className={`px-3 py-1.5 rounded-lg text-sm ${theme.panel} border ${theme.border} text-white font-medium`}
+                  >
+                    {SUPPORTED_LANGUAGES.map((lang) => (
+                      <option key={lang.code} value={lang.code}>
+                        {lang.flag} {lang.code.split("_")[0].toUpperCase()}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-2xl text-slate-600">→</span>
+                  <select
+                    value={settings.backLang || "es_ES"}
+                    onChange={(e) => updateSetting("backLang", e.target.value)}
+                    className={`px-3 py-1.5 rounded-lg text-sm ${theme.panel} border ${theme.border} text-white font-medium`}
+                  >
+                    {SUPPORTED_LANGUAGES.map((lang) => (
+                      <option key={lang.code} value={lang.code}>
+                        {lang.flag} {lang.code.split("_")[0].toUpperCase()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className={`text-xs ${theme.textAccent}`}>
+                {filteredMasterDeck.length} cards available for this language pair
               </div>
             </div>
 
@@ -952,11 +984,10 @@ const App = () => {
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => setSelectedCategories([])}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
-                      selectedCategories.length === 0
-                        ? `${theme.accent} border-transparent ${theme.onAccent}`
-                        : `${theme.panel} ${theme.border} text-slate-400 hover:border-slate-600`
-                    }`}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${selectedCategories.length === 0
+                      ? `${theme.accent} border-transparent ${theme.onAccent}`
+                      : `${theme.panel} ${theme.border} text-slate-400 hover:border-slate-600`
+                      }`}
                   >
                     All Categories
                   </button>
@@ -964,11 +995,10 @@ const App = () => {
                     <button
                       key={cat}
                       onClick={() => toggleCategory(cat)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
-                        selectedCategories.includes(cat)
-                          ? `${theme.accent} border-transparent ${theme.onAccent} shadow-lg`
-                          : `${theme.panel} ${theme.border} text-slate-400 hover:border-slate-600`
-                      }`}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${selectedCategories.includes(cat)
+                        ? `${theme.accent} border-transparent ${theme.onAccent} shadow-lg`
+                        : `${theme.panel} ${theme.border} text-slate-400 hover:border-slate-600`
+                        }`}
                     >
                       {cat}
                     </button>
@@ -1019,6 +1049,9 @@ const App = () => {
             handleImport={handleImport}
             importError={importError}
             setView={setView}
+            masterDeck={masterDeck}
+            processNewCards={processNewCards}
+            setImportError={setImportError}
           />
         )}
 
@@ -1026,6 +1059,7 @@ const App = () => {
           <LearnView
             theme={theme}
             settings={settings}
+            updateSetting={updateSetting}
             displayCount={displayCount}
             selectedCategories={selectedCategories}
             resetOrbit={resetOrbit}

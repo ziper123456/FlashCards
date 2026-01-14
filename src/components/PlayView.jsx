@@ -70,8 +70,10 @@ export default function PlayView(props) {
         {orbitCards.map((card) => {
           const isRevealed = revealedIds.includes(card.id);
           const isFading = fadingIds.includes(card.id);
-          const initialDisplay = settings.isReversed ? card.back : card.front;
-          const revealedDisplay = settings.isReversed ? card.front : card.back;
+          const frontLang = settings?.frontLang || "en_US";
+          const backLang = settings?.backLang || "es_ES";
+          const initialDisplay = card[frontLang] || "";
+          const revealedDisplay = card[backLang] || "";
           return (
             <button
               key={card.id}
@@ -81,16 +83,14 @@ export default function PlayView(props) {
               style={{
                 width: `${settings.cardWidth}px`,
                 height: `${settings.cardHeight}px`,
-                transform: `translate(${card.x}px, ${card.y}px) ${
-                  isRevealed ? "scale(1.25)" : "scale(1)"
-                }`,
+                transform: `translate(${card.x}px, ${card.y}px) ${isRevealed ? "scale(1.25)" : "scale(1)"
+                  }`,
                 transition: isFading
-                  ? `transform 0.4s ease-out, opacity ${
-                      (settings.fadeTime / 1000) * 0.8
-                    }s ease-out`
+                  ? `transform 0.4s ease-out, opacity ${(settings.fadeTime / 1000) * 0.8
+                  }s ease-out`
                   : isRevealed
-                  ? "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
-                  : "transform 0.016s linear",
+                    ? "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
+                    : "transform 0.016s linear",
                 opacity: isFading ? 0 : 1,
                 backgroundColor: isRevealed
                   ? `rgba(5, 150, 105, 1)`
@@ -98,11 +98,10 @@ export default function PlayView(props) {
                 pointerEvents: isFading ? "none" : "auto",
                 zIndex: isRevealed ? 50 : 1,
               }}
-              className={`absolute border rounded-xl flex flex-col items-center justify-center p-3 text-center transition-all shadow-lg backdrop-blur-sm ${
-                isRevealed
+              className={`absolute border rounded-xl flex flex-col items-center justify-center p-3 text-center transition-all shadow-lg backdrop-blur-sm ${isRevealed
                   ? "border-emerald-400 text-white shadow-[0_0_20px_rgba(5,150,105,0.4)]"
                   : `${theme.card} text-white`
-              }`}
+                }`}
             >
               {isRevealed ? (
                 <div className="flex flex-col items-center justify-center w-full">
@@ -158,17 +157,15 @@ export default function PlayView(props) {
       {activeCard && view === "play-challenge" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
           <div
-            className={`w-full max-w-sm ${
-              theme.panel
-            } border-2 rounded-3xl p-8 shadow-2xl transition-all ${
-              feedback === "correct"
+            className={`w-full max-w-sm ${theme.panel
+              } border-2 rounded-3xl p-8 shadow-2xl transition-all ${feedback === "correct"
                 ? "border-green-500"
                 : feedback === "wrong"
-                ? "border-red-500 animate-shake"
-                : feedback === "revealing"
-                ? "border-yellow-500"
-                : theme.challenge
-            }`}
+                  ? "border-red-500 animate-shake"
+                  : feedback === "revealing"
+                    ? "border-yellow-500"
+                    : theme.challenge
+              }`}
           >
             <div className="flex justify-between items-start mb-6 text-white">
               <div className="flex flex-col">
@@ -203,7 +200,7 @@ export default function PlayView(props) {
             </div>
             <div className="text-center mb-10 text-white">
               <h3 className="text-4xl font-bold mb-2 break-words">
-                {settings.isReversed ? activeCard.back : activeCard.front}
+                {activeCard[settings?.frontLang || "en_US"] || ""}
               </h3>
               <p className="text-slate-500 text-sm">
                 {feedback === "revealing" ? "Reviewing..." : "Type the meaning"}
@@ -214,13 +211,11 @@ export default function PlayView(props) {
                 autoFocus
                 disabled={feedback === "revealing"}
                 type="text"
-                className={`w-full ${
-                  theme.bg
-                } border-b-2 outline-none p-3 text-xl text-center mb-6 transition-all text-white ${
-                  feedback === "revealing"
+                className={`w-full ${theme.bg
+                  } border-b-2 outline-none p-3 text-xl text-center mb-6 transition-all text-white ${feedback === "revealing"
                     ? "border-yellow-500 text-yellow-400"
                     : `border-white/10 focus:border-white`
-                }`}
+                  }`}
                 value={answer}
                 onChange={(e) => setAnswer(e.target.value)}
                 placeholder="..."
