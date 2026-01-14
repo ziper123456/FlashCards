@@ -1,0 +1,16 @@
+/* Minimal global styles */
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+/* Provide a neutral background until theme classes apply */
+body {
+  background: #0f172a;
+  color: #e6eef8;
+}
