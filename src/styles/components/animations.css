@@ -1,0 +1,240 @@
+/* ===================================
+   ANIMATIONS
+   =================================== */
+
+/* Fade In */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Slide In */
+@keyframes slideInFromLeft {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInFromRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInFromTop {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInFromBottom {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.animate-slide-in-left {
+    animation: slideInFromLeft 0.3s ease-out;
+}
+
+.animate-slide-in-right {
+    animation: slideInFromRight 0.3s ease-out;
+}
+
+.animate-slide-in-top {
+    animation: slideInFromTop 0.2s ease-out;
+}
+
+.animate-slide-in-bottom {
+    animation: slideInFromBottom 0.2s ease-out;
+}
+
+/* Scale In */
+@keyframes scaleIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.animate-scale-in {
+    animation: scaleIn 0.2s ease-out;
+}
+
+/* Pulse */
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Bounce */
+@keyframes bounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.animate-bounce {
+    animation: bounce 1s infinite;
+}
+
+/* Spin (for loaders) */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Shake (for errors) */
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+        transform: translateX(-5px);
+    }
+
+    20%,
+    40%,
+    60%,
+    80% {
+        transform: translateX(5px);
+    }
+}
+
+.animate-shake {
+    animation: shake 0.5s ease-in-out;
+}
+
+/* Flip (for cards) */
+@keyframes flip {
+    from {
+        transform: rotateY(0deg);
+    }
+
+    to {
+        transform: rotateY(180deg);
+    }
+}
+
+.animate-flip {
+    animation: flip 0.6s ease-in-out;
+    transform-style: preserve-3d;
+}
+
+/* Glow Effect */
+@keyframes glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 5px rgba(99, 102, 241, 0.5);
+    }
+
+    50% {
+        box-shadow: 0 0 20px rgba(99, 102, 241, 0.8);
+    }
+}
+
+.animate-glow {
+    animation: glow 2s ease-in-out infinite;
+}
+
+/* Delay Classes */
+.delay-75 {
+    animation-delay: 75ms;
+}
+
+.delay-150 {
+    animation-delay: 150ms;
+}
+
+.delay-300 {
+    animation-delay: 300ms;
+}
+
+.delay-500 {
+    animation-delay: 500ms;
+}
+
+/* Duration Classes */
+.duration-fast {
+    animation-duration: 200ms;
+}
+
+.duration-normal {
+    animation-duration: 300ms;
+}
+
+.duration-slow {
+    animation-duration: 500ms;
+}

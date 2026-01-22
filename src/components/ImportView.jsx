@@ -13,6 +13,7 @@ export default function ImportView({
   masterDeck,
   processNewCards,
   setImportError,
+  refreshMasterDeck,
 }) {
   // Mode: "quick" | "manual" | "missing"
   const [mode, setMode] = useState("quick");
@@ -152,6 +153,10 @@ export default function ImportView({
         setModifiedIds(new Set());
         // Reload to refresh the list
         loadMissingWords();
+        // Also refresh the master deck so words appear in deck selection
+        if (refreshMasterDeck) {
+          await refreshMasterDeck();
+        }
       }
     } catch (err) {
       console.error("Save error:", err);
@@ -283,8 +288,8 @@ export default function ImportView({
           <button
             onClick={() => setMode("quick")}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${mode === "quick"
-                ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/50"
-                : "bg-white/5 text-slate-400 border border-transparent hover:bg-white/10"
+              ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/50"
+              : "bg-white/5 text-slate-400 border border-transparent hover:bg-white/10"
               }`}
           >
             <FileText size={14} /> Quick
@@ -292,8 +297,8 @@ export default function ImportView({
           <button
             onClick={enableManualMode}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${mode === "manual"
-                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50"
-                : "bg-white/5 text-slate-400 border border-transparent hover:bg-white/10"
+              ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50"
+              : "bg-white/5 text-slate-400 border border-transparent hover:bg-white/10"
               }`}
           >
             <Edit3 size={14} /> Manual
@@ -301,8 +306,8 @@ export default function ImportView({
           <button
             onClick={() => setMode("missing")}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${mode === "missing"
-                ? "bg-amber-500/20 text-amber-400 border border-amber-500/50"
-                : "bg-white/5 text-slate-400 border border-transparent hover:bg-white/10"
+              ? "bg-amber-500/20 text-amber-400 border border-amber-500/50"
+              : "bg-white/5 text-slate-400 border border-transparent hover:bg-white/10"
               }`}
           >
             <Search size={14} /> Missing ({missingTotal || "?"})

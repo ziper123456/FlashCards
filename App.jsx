@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { Check, Brain, Download, Copy, Filter, Undo2 } from "lucide-react";
 
 import THEMES, {
@@ -16,8 +17,60 @@ import LearnView from "./src/components/LearnView.jsx";
 import PlayView from "./src/components/PlayView.jsx";
 import ImportView from "./src/components/ImportView.jsx";
 import OptionsView from "./src/components/OptionsView.jsx";
+import WelcomeScreen from "./src/components/WelcomeScreen.jsx";
+import StoriesView from "./src/components/StoriesView.jsx";
+import StoriesImportView from "./src/components/StoriesImportView.jsx";
+import StoriesLearnView from "./src/components/StoriesLearnView.jsx";
+import StoriesChallengeView from "./src/components/StoriesChallengeView.jsx";
+
 
 const App = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Derive 'view' from current URL path for backward compatibility
+  const getViewFromPath = (pathname) => {
+    if (pathname === "/") return "welcome";
+    if (pathname === "/vocabulary") return "menu";
+    if (pathname === "/vocabulary/learn") return "learn";
+    if (pathname === "/vocabulary/play/quick") return "play-quick";
+    if (pathname === "/vocabulary/play/challenge") return "play-challenge";
+    if (pathname === "/vocabulary/import") return "import";
+    if (pathname === "/settings") return "options";
+    if (pathname === "/stories") return "stories-list";
+    if (pathname === "/stories/import") return "stories-import";
+    if (pathname.startsWith("/stories/learn/")) return "stories-learn";
+    if (pathname.startsWith("/stories/challenge/")) return "stories-challenge";
+    return "menu";
+  };
+
+  const view = getViewFromPath(location.pathname);
+
+  // Extract story ID from path for stories views
+  const getStoryIdFromPath = (pathname) => {
+    const learnMatch = pathname.match(/^\/stories\/learn\/(\d+)$/);
+    if (learnMatch) return learnMatch[1];
+    const challengeMatch = pathname.match(/^\/stories\/challenge\/(\d+)$/);
+    if (challengeMatch) return challengeMatch[1];
+    return null;
+  };
+  const currentStoryId = getStoryIdFromPath(location.pathname);
+
+  // Navigation helper that replaces setView
+  const navigateTo = (viewName) => {
+    const routes = {
+      "welcome": "/",
+      "menu": "/vocabulary",
+      "learn": "/vocabulary/learn",
+      "play-quick": "/vocabulary/play/quick",
+      "play-challenge": "/vocabulary/play/challenge",
+      "import": "/vocabulary/import",
+      "options": "/settings",
+      "stories": "/stories",
+    };
+    navigate(routes[viewName] || "/vocabulary");
+  };
+
   // --- Core Data State ---
   const [masterDeck, setMasterDeck] = useState([]);
   const [deckLoaded, setDeckLoaded] = useState(false);
@@ -33,16 +86,22 @@ const App = () => {
     cardOpacity: 1.0,
     maxOrbitSize: 50,
     isReversed: false,
-    // TTS Settings (shared)
+    // TTS Settings (global)
     ttsPitch: 1.0,
     ttsRate: 1.0,
     ttsVolume: 1.0,
-    // Separate voice settings for front and back languages
-    ttsFrontVoiceURI: "",
-    ttsBackVoiceURI: "",
+    // Dedicated voice for each language
+    ttsVoice_en_US: "",
+    ttsVoice_es_ES: "",
+    ttsVoice_vi_VN: "",
+    ttsVoice_de_DE: "",
     // Language Pair Settings
     frontLang: "en_US",
     backLang: "es_ES",
+    // Stories Settings
+    storiesTextAlign: "center",
+    storiesVisibleLines: 3,
+    storiesLineOpacity: 0.3,
   };
   const [settings, setSettings] = useState(defaultSettings);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -50,7 +109,7 @@ const App = () => {
   // --- Session & View State ---
   const [sessionQueue, setSessionQueue] = useState([]);
   const [orbitCards, setOrbitCards] = useState([]);
-  const [view, setView] = useState("menu");
+  // Note: view is now derived from URL, setView is replaced by navigateTo
   const [prevView, setPrevView] = useState("menu");
   const [activeCard, setActiveCard] = useState(null);
   const [playAutoRandom, setPlayAutoRandom] = useState(false);
@@ -243,6 +302,18 @@ const App = () => {
       ? 1
       : 0);
 
+  // --- Refresh Deck from API ---
+  const refreshMasterDeck = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/deck`);
+      const data = await res.json();
+      let deck = Array.isArray(data) ? data : [];
+      setMasterDeck(deck);
+    } catch (err) {
+      console.error("Failed to refresh deck:", err);
+    }
+  }, []);
+
   // --- Handlers ---
   const incrementStudyCount = useCallback((id) => {
     setMasterDeck((prev) =>
@@ -267,6 +338,25 @@ const App = () => {
     setMasterDeck((prev) => prev.filter((c) => c.id !== id));
     if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
     undoTimeoutRef.current = setTimeout(() => setLastDeleted(null), 5000);
+  };
+
+  const updateCard = async (id, updates) => {
+    // Update local state immediately
+    setMasterDeck((prev) =>
+      prev.map((card) =>
+        card.id === id ? { ...card, ...updates } : card
+      )
+    );
+    // Persist to backend
+    try {
+      await fetch(`${API_BASE}/api/cards/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+    } catch (err) {
+      console.error("Failed to update card:", err);
+    }
   };
 
   const undoDelete = () => {
@@ -337,7 +427,7 @@ const App = () => {
     const initialQueue = sortedList.slice(maxActive);
     setOrbitCards(initialOrbit);
     setSessionQueue(initialQueue);
-    setView(mode);
+    navigateTo(mode);
     setRevealedIds([]);
     setFadingIds([]);
     setActiveCard(null);
@@ -873,7 +963,7 @@ const App = () => {
         settings={settings}
         setView={(v) => {
           setPrevView(view);
-          setView(v);
+          navigateTo(v);
         }}
         prevView={prevView}
         setPrevView={setPrevView}
@@ -883,6 +973,7 @@ const App = () => {
         exportAsJson={exportAsJson}
         startSession={startSession}
         selectedCategories={selectedCategories}
+        view={view}
       />
 
       <main className="flex-1 relative overflow-hidden">
@@ -896,6 +987,10 @@ const App = () => {
               <span className="text-xs font-medium">Deleted. Undo?</span>
             </button>
           </div>
+        )}
+
+        {view === "welcome" && (
+          <WelcomeScreen theme={theme} />
         )}
 
         {view === "menu" && (
@@ -1021,6 +1116,7 @@ const App = () => {
                   theme={theme}
                   settings={settings}
                   deleteCard={deleteCard}
+                  updateCard={updateCard}
                   observerRef={observerTarget}
                 />
               </>
@@ -1033,7 +1129,7 @@ const App = () => {
             theme={theme}
             settings={settings}
             updateSetting={updateSetting}
-            setView={setView}
+            setView={navigateTo}
             prevView={prevView}
             resetAllProgress={resetAllProgress}
           />
@@ -1048,10 +1144,11 @@ const App = () => {
             setInputText={setInputText}
             handleImport={handleImport}
             importError={importError}
-            setView={setView}
+            setView={navigateTo}
             masterDeck={masterDeck}
             processNewCards={processNewCards}
             setImportError={setImportError}
+            refreshMasterDeck={refreshMasterDeck}
           />
         )}
 
@@ -1070,7 +1167,7 @@ const App = () => {
             handleCardClick={handleCardClick}
             handleRequeue={handleRequeue}
             handleLearnClick={handleLearnClick}
-            setView={setView}
+            setView={navigateTo}
             learnAutoPlay={learnAutoPlay}
             setLearnAutoPlay={setLearnAutoPlay}
             ttsEnabled={ttsEnabled}
@@ -1107,6 +1204,28 @@ const App = () => {
             setPlayAutoRandom={setPlayAutoRandom}
             skipActiveAndRandomNext={skipActiveAndRandomNext}
           />
+        )}
+
+        {/* Stories Views */}
+        {view === "stories-list" && (
+          <StoriesView theme={theme} settings={settings} updateSetting={updateSetting} />
+        )}
+
+        {view === "stories-import" && (
+          <StoriesImportView theme={theme} />
+        )}
+
+        {view === "stories-learn" && (
+          <StoriesLearnView
+            theme={theme}
+            settings={settings}
+            updateSetting={updateSetting}
+            storyId={currentStoryId}
+          />
+        )}
+
+        {view === "stories-challenge" && (
+          <StoriesChallengeView theme={theme} settings={settings} storyId={currentStoryId} />
         )}
       </main>
       <Footer masterDeckLength={masterDeck.length} theme={theme} />

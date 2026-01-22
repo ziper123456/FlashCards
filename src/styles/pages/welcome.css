@@ -1,0 +1,184 @@
+/* ===================================
+   WELCOME SCREEN STYLES
+   =================================== */
+
+.welcome-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.welcome-hero {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.welcome-hero__title-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.welcome-hero__title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: white;
+}
+
+@media (min-width: 640px) {
+    .welcome-hero__title {
+        font-size: 3rem;
+    }
+}
+
+.welcome-hero__subtitle {
+    color: rgb(148, 163, 184);
+    font-size: 1.125rem;
+    max-width: 28rem;
+    margin: 0 auto;
+}
+
+/* Mode Cards */
+.welcome-modes {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    max-width: 42rem;
+    width: 100%;
+}
+
+@media (min-width: 640px) {
+    .welcome-modes {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.welcome-mode-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    padding: 2rem;
+    text-align: left;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 1px solid;
+}
+
+.welcome-mode-card:hover {
+    transform: scale(1.02);
+}
+
+.welcome-mode-card__glow {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8rem;
+    height: 8rem;
+    border-radius: 50%;
+    filter: blur(3rem);
+    transition: all 0.3s ease;
+}
+
+.welcome-mode-card:hover .welcome-mode-card__glow {
+    opacity: 1.5;
+}
+
+.welcome-mode-card__icon {
+    margin-bottom: 1rem;
+}
+
+.welcome-mode-card__title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 0.5rem;
+}
+
+.welcome-mode-card__description {
+    color: rgb(148, 163, 184);
+    font-size: 0.875rem;
+}
+
+.welcome-mode-card__tags {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.welcome-mode-card__tag {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+}
+
+/* Vocabulary Card */
+.welcome-mode-card--vocabulary {
+    background: linear-gradient(to bottom right, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2));
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+.welcome-mode-card--vocabulary:hover {
+    border-color: rgba(99, 102, 241, 0.6);
+    background: linear-gradient(to bottom right, rgba(99, 102, 241, 0.3), rgba(168, 85, 247, 0.3));
+}
+
+.welcome-mode-card--vocabulary .welcome-mode-card__glow {
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.welcome-mode-card--vocabulary:hover .welcome-mode-card__glow {
+    background: rgba(99, 102, 241, 0.2);
+}
+
+.welcome-mode-card--vocabulary .welcome-mode-card__tag {
+    background: rgba(99, 102, 241, 0.2);
+    color: rgb(165, 180, 252);
+}
+
+/* Stories Card */
+.welcome-mode-card--stories {
+    background: linear-gradient(to bottom right, rgba(16, 185, 129, 0.2), rgba(20, 184, 166, 0.2));
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.welcome-mode-card--stories:hover {
+    border-color: rgba(16, 185, 129, 0.6);
+    background: linear-gradient(to bottom right, rgba(16, 185, 129, 0.3), rgba(20, 184, 166, 0.3));
+}
+
+.welcome-mode-card--stories .welcome-mode-card__glow {
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.welcome-mode-card--stories:hover .welcome-mode-card__glow {
+    background: rgba(16, 185, 129, 0.2);
+}
+
+.welcome-mode-card--stories .welcome-mode-card__tag {
+    background: rgba(16, 185, 129, 0.2);
+    color: rgb(110, 231, 183);
+}
+
+/* Footer */
+.welcome-footer {
+    color: rgb(71, 85, 105);
+    font-size: 0.75rem;
+    margin-top: 3rem;
+}
+
+.welcome-footer kbd {
+    padding: 0.125rem 0.375rem;
+    background: rgb(30, 41, 59);
+    border-radius: 0.25rem;
+    color: rgb(148, 163, 184);
+}
+
+.welcome-footer kbd+kbd {
+    margin-left: 0.25rem;
+}

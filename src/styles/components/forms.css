@@ -1,0 +1,201 @@
+/* ===================================
+   FORM CONTROLS
+   =================================== */
+
+/* Text Input */
+.input-field {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.input-field--sm {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.input-field:focus {
+    border-color: rgba(99, 102, 241, 0.5);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.input-field::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* Textarea */
+.textarea-field {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    font-size: 0.875rem;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 6rem;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.textarea-field:focus {
+    border-color: rgba(99, 102, 241, 0.5);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Select Dropdown */
+.select-field {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.select-field:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.select-field:focus {
+    border-color: rgba(99, 102, 241, 0.5);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Select with limited width (for voice selectors) */
+.select-field--truncate {
+    min-width: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* Range Slider */
+.slider-control {
+    width: 100%;
+    height: 0.5rem;
+    border-radius: 0.5rem;
+    appearance: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.slider-control::-webkit-slider-thumb {
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.slider-control::-moz-range-thumb {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Slider with value display */
+.slider-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.slider-value {
+    min-width: 3rem;
+    text-align: right;
+    font-family: ui-monospace, monospace;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Form Label */
+.form-label {
+    display: block;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 0.5rem;
+}
+
+/* Form Group */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group--compact {
+    margin-bottom: 0.75rem;
+}
+
+/* Form Row (inline fields) */
+.form-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-row__label {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
+    white-space: nowrap;
+}
+
+/* Checkbox/Radio */
+.checkbox-field,
+.radio-field {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 0.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+}
+
+.radio-field {
+    border-radius: 50%;
+}
+
+/* File Upload */
+.file-upload {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.02);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.file-upload:hover {
+    border-color: rgba(99, 102, 241, 0.5);
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.file-upload__text {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.6);
+}

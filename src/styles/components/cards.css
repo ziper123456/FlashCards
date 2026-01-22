@@ -1,0 +1,166 @@
+/* ===================================
+   CARD STYLES
+   =================================== */
+
+/* Base Card */
+.card {
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
+}
+
+/* Flashcard - Grid View */
+.flashcard {
+    position: relative;
+    height: 7rem;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+}
+
+.flashcard:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: scale(1.02);
+}
+
+.flashcard__front {
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 0.5rem;
+}
+
+.flashcard__back {
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 0.5rem;
+    font-size: 0.8em;
+}
+
+.flashcard__study-count {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    opacity: 0.4;
+    font-size: 0.625rem;
+}
+
+/* Panel Card */
+.card-panel {
+    padding: 1.5rem;
+    border-radius: 1.25rem;
+}
+
+.card-panel--hover:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Story Card */
+.card-story {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.card-story:hover {
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.card-story__title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: white;
+    transition: color 0.2s ease;
+}
+
+.card-story:hover .card-story__title {
+    color: rgb(52, 211, 153);
+}
+
+.card-story__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.card-story__category {
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Empty State Card */
+.card-empty {
+    text-align: center;
+    padding: 5rem;
+    border: 2px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 1.25rem;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.card-empty__icon {
+    margin: 0 auto 1rem;
+    color: rgba(255, 255, 255, 0.2);
+}
+
+.card-empty__text {
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 1rem;
+}
+
+/* Modal Card */
+.card-modal {
+    width: 100%;
+    max-width: 32rem;
+    border-radius: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+.card-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.card-modal__title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: white;
+}
+
+.card-modal__body {
+    padding: 1rem;
+}
+
+.card-modal__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+}

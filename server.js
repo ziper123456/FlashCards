@@ -99,6 +99,30 @@ db.run(`
   )
 `);
 
+// Create stories table
+db.run(`
+  CREATE TABLE IF NOT EXISTS stories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    category TEXT DEFAULT 'General',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+// Create story_lines table
+db.run(`
+  CREATE TABLE IF NOT EXISTS story_lines (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    story_id INTEGER NOT NULL,
+    line_order INTEGER NOT NULL,
+    en_US TEXT,
+    es_ES TEXT,
+    vi_VN TEXT,
+    de_DE TEXT,
+    FOREIGN KEY (story_id) REFERENCES stories(id) ON DELETE CASCADE
+  )
+`);
+
 // Initialize database then start server
 initDatabase().then(() => {
   // Get all cards
@@ -305,6 +329,138 @@ initDatabase().then(() => {
         res.json({ ok: true, updated: cards.length });
       });
     });
+  });
+
+  // ========== STORIES API ==========
+
+  // Get all stories (with line count)
+  app.get("/api/stories", (req, res) => {
+    db.all(
+      `SELECT s.*, COUNT(sl.id) as line_count 
+       FROM stories s 
+       LEFT JOIN story_lines sl ON s.id = sl.story_id 
+       GROUP BY s.id 
+       ORDER BY s.created_at DESC`,
+      [],
+      (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows || []);
+      }
+    );
+  });
+
+  // Create a new story with lines
+  app.post("/api/stories", (req, res) => {
+    const { name, category, lines } = req.body;
+    if (!name) return res.status(400).json({ error: "Story name is required" });
+
+    db.run(
+      "INSERT INTO stories (name, category) VALUES (?, ?)",
+      [name, category || "General"],
+      function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+
+        const storyId = this.lastID;
+
+        if (lines && Array.isArray(lines) && lines.length > 0) {
+          const stmt = db.prepare(
+            "INSERT INTO story_lines (story_id, line_order, en_US, es_ES, vi_VN, de_DE) VALUES (?, ?, ?, ?, ?, ?)"
+          );
+
+          lines.forEach((line, index) => {
+            stmt.run(
+              storyId,
+              index + 1,
+              line.en_US || "",
+              line.es_ES || "",
+              line.vi_VN || "",
+              line.de_DE || ""
+            );
+          });
+
+          stmt.finalize((err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, id: storyId, lineCount: lines.length });
+          });
+        } else {
+          res.json({ ok: true, id: storyId, lineCount: 0 });
+        }
+      }
+    );
+  });
+
+  // Get a single story with all its lines
+  app.get("/api/stories/:id", (req, res) => {
+    const { id } = req.params;
+
+    db.get("SELECT * FROM stories WHERE id = ?", [id], (err, story) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!story) return res.status(404).json({ error: "Story not found" });
+
+      db.all(
+        "SELECT * FROM story_lines WHERE story_id = ? ORDER BY line_order ASC",
+        [id],
+        (err, lines) => {
+          if (err) return res.status(500).json({ error: err.message });
+          res.json({ ...story, lines: lines || [] });
+        }
+      );
+    });
+  });
+
+  // Delete a story (cascade deletes lines)
+  app.delete("/api/stories/:id", (req, res) => {
+    const { id } = req.params;
+
+    db.run("DELETE FROM story_lines WHERE story_id = ?", [id], (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+
+      db.run("DELETE FROM stories WHERE id = ?", [id], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        if (this.changes === 0) return res.status(404).json({ error: "Story not found" });
+        res.json({ ok: true });
+      });
+    });
+  });
+
+  // Update a story (name, category, and optionally replace all lines)
+  app.patch("/api/stories/:id", (req, res) => {
+    const { id } = req.params;
+    const { name, category, lines } = req.body;
+
+    db.run(
+      `UPDATE stories SET 
+        name = COALESCE(?, name),
+        category = COALESCE(?, category)
+       WHERE id = ?`,
+      [name, category, id],
+      function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        if (this.changes === 0) return res.status(404).json({ error: "Story not found" });
+
+        if (lines && Array.isArray(lines)) {
+          // Replace all lines
+          db.run("DELETE FROM story_lines WHERE story_id = ?", [id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+
+            const stmt = db.prepare(
+              "INSERT INTO story_lines (story_id, line_order, en_US, es_ES, vi_VN, de_DE) VALUES (?, ?, ?, ?, ?, ?)"
+            );
+
+            lines.forEach((line, index) => {
+              stmt.run(id, index + 1, line.en_US || "", line.es_ES || "", line.vi_VN || "", line.de_DE || "");
+            });
+
+            stmt.finalize((err) => {
+              if (err) return res.status(500).json({ error: err.message });
+              res.json({ ok: true, id, lineCount: lines.length });
+            });
+          });
+        } else {
+          res.json({ ok: true, id });
+        }
+      }
+    );
   });
 
   const port = process.env.PORT || 3001;

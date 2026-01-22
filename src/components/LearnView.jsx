@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import {
   BookOpen,
   RefreshCw,
@@ -9,9 +9,6 @@ import {
   VolumeX,
   Clock,
   SkipForward,
-  Settings,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
 
 export default function LearnView({
@@ -36,28 +33,13 @@ export default function LearnView({
   settings,
   updateSetting,
 }) {
-  const [showTtsSettings, setShowTtsSettings] = useState(false);
-  const [availableVoices, setAvailableVoices] = useState([]);
-
-  // Get available voices on mount
-  useEffect(() => {
-    const loadVoices = () => {
-      const voices = window.speechSynthesis?.getVoices() || [];
-      setAvailableVoices(voices);
-    };
-
-    loadVoices();
-    // Voices might load asynchronously
-    if (window.speechSynthesis) {
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
-
-    return () => {
-      if (window.speechSynthesis) {
-        window.speechSynthesis.onvoiceschanged = null;
-      }
-    };
-  }, []);
+  // Get available voices on mount (for speaking only, not for UI)
+  const getVoiceForLang = (langCode) => {
+    const voiceURI = settings?.[`ttsVoice_${langCode}`] || "";
+    if (!voiceURI) return null;
+    const voices = window.speechSynthesis?.getVoices() || [];
+    return voices.find(v => v.voiceURI === voiceURI) || null;
+  };
 
   // Determine current text to speak based on card state and language settings
   const currentCard = orbitCards.length > 0 ? orbitCards[0] : null;
@@ -93,23 +75,20 @@ export default function LearnView({
   }
 
   // Custom function to speak a single text with appropriate voice
-  const speakSingle = (text, langCode, voiceURI) => {
+  const speakSingle = (text, ttsLangCode, langSettingKey) => {
     if (!window.speechSynthesis || !text) return;
 
     window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = langCode;
+    utterance.lang = ttsLangCode;
     utterance.pitch = settings?.ttsPitch || 1.0;
     utterance.rate = settings?.ttsRate || 1.0;
     utterance.volume = settings?.ttsVolume || 1.0;
 
-    // Try to use selected voice
-    if (voiceURI) {
-      const voices = window.speechSynthesis.getVoices();
-      const selectedVoice = voices.find(v => v.voiceURI === voiceURI);
-      if (selectedVoice) utterance.voice = selectedVoice;
-    }
+    // Try to use selected voice from global settings
+    const selectedVoice = getVoiceForLang(langSettingKey);
+    if (selectedVoice) utterance.voice = selectedVoice;
 
     window.speechSynthesis.speak(utterance);
   };
@@ -129,10 +108,10 @@ export default function LearnView({
       const timer = setTimeout(() => {
         if (!isFlipped) {
           // Card just shown - speak front only
-          speakSingle(frontText, frontTtsLang, settings?.ttsFrontVoiceURI);
+          speakSingle(frontText, frontTtsLang, displayFrontLang);
         } else {
           // Card flipped - speak ONLY the back (meaning)
-          speakSingle(backText, backTtsLang, settings?.ttsBackVoiceURI);
+          speakSingle(backText, backTtsLang, displayBackLang);
         }
       }, 100);
       return () => clearTimeout(timer);
@@ -146,29 +125,10 @@ export default function LearnView({
     }
   }, [ttsEnabled]);
 
-  // Filter voices by front display language (respects isReversed)
-  const frontVoices = availableVoices.filter((v) => {
-    const ttsLang = getTtsLang(displayFrontLang);
-    return v.lang.startsWith(ttsLang.split("-")[0]);
-  });
-
-  // Filter voices by back display language (respects isReversed)
-  const backVoices = availableVoices.filter((v) => {
-    const ttsLang = getTtsLang(displayBackLang);
-    return v.lang.startsWith(ttsLang.split("-")[0]);
-  });
-
-  // Get unique languages from available voices
-  const uniqueLanguages = [
-    ...new Set(availableVoices.map((v) => v.lang)),
-  ].sort();
-
   return (
     <div className="w-full h-full flex flex-col items-center justify-center relative p-6 perspective-[1500px]">
       <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-3 z-30 pointer-events-auto">
-        <div
-          className={`${theme.panel} border ${theme.border} px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest uppercase flex items-center gap-2 shadow-2xl backdrop-blur-sm`}
-        >
+        <div className={`${theme.panel} ${theme.border} px-4 py-1.5 rounded-full text-label flex items-center gap-2 shadow-2xl backdrop-blur-sm`}>
           <BookOpen size={10} className={theme.textAccent} />
           <span className="text-slate-300 ml-1">{displayCount} left</span>
           <span className="text-slate-500 mx-1">|</span>
@@ -180,7 +140,7 @@ export default function LearnView({
         </div>
         <button
           onClick={resetOrbit}
-          className={`${theme.panel} p-1.5 rounded-full border ${theme.border} text-slate-400 hover:text-white`}
+          className={`btn-icon ${theme.panel} ${theme.border}`}
         >
           <RefreshCw size={14} />
         </button>
@@ -273,7 +233,7 @@ export default function LearnView({
             );
           })
         ) : (
-          <div className="flex flex-col items-center justify-center h-full animate-in fade-in zoom-in">
+          <div className="flex-col-center h-full animate-in fade-in zoom-in">
             <Check className="w-16 h-16 text-emerald-500 mb-4" />
             <p className="text-white text-2xl font-medium mb-2">
               You're all caught up!
@@ -284,7 +244,13 @@ export default function LearnView({
             <div className="flex gap-4">
               <button
                 onClick={resetOrbit}
-                className={`px-6 py-2 ${theme.panel} border ${theme.border} rounded-lg text-sm text-white`}
+                className={`btn-secondary ${theme.panel} ${theme.border}`}
+              >
+                Restart Session
+              </button>
+              <button
+                onClick={() => setView("menu")}
+                className="btn-secondary"
               >
                 Restart Session
               </button>
@@ -299,198 +265,67 @@ export default function LearnView({
         )}
       </div>
 
-      {orbitCards.length > 0 && (
-        <div
-          className={`mt-8 w-full max-w-xl ${theme.panel} border ${theme.border} rounded-2xl p-4 flex flex-col gap-4 shadow-xl z-20`}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-30">
+        {/* TTS Toggle */}
+        <button
+          onClick={() => setTtsEnabled(!ttsEnabled)}
+          className={`btn-toggle ${ttsEnabled ? `active ${theme.accent} ${theme.onAccent}` : "inactive"}`}
+          title={ttsEnabled ? "TTS On" : "TTS Off"}
         >
-          {/* Main Controls Row */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <button
-                onClick={() => setLearnAutoPlay(!learnAutoPlay)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${learnAutoPlay
-                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50"
-                  : "bg-white/5 text-slate-400 border border-transparent hover:bg-white/10"
-                  }`}
-              >
-                {learnAutoPlay ? (
-                  <PauseIcon size={14} fill="currentColor" />
-                ) : (
-                  <PlayIcon size={14} />
-                )}{" "}
-                {learnAutoPlay ? "Auto" : "Auto"}
-              </button>
+          {ttsEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+          <span className="hidden sm:inline">{ttsEnabled ? "Voice" : "Muted"}</span>
+        </button>
 
-              <button
-                onClick={() => setTtsEnabled(!ttsEnabled)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${ttsEnabled
-                  ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/50"
-                  : "bg-white/5 text-slate-400 border border-transparent hover:bg-white/10"
-                  }`}
-              >
-                {ttsEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />} Voice
-              </button>
+        {/* Auto Play Toggle */}
+        <button
+          onClick={() => setLearnAutoPlay(!learnAutoPlay)}
+          className={`btn-toggle ${learnAutoPlay ? `active ${theme.accent} ${theme.onAccent}` : "inactive"}`}
+          title={learnAutoPlay ? "Auto-play On" : "Auto-play Off"}
+        >
+          {learnAutoPlay ? <PlayIcon size={14} /> : <PauseIcon size={14} />}
+          <span className="hidden sm:inline">{learnAutoPlay ? "Auto" : "Manual"}</span>
+        </button>
 
-              {/* TTS Settings Toggle */}
-              {ttsEnabled && (
-                <button
-                  onClick={() => setShowTtsSettings(!showTtsSettings)}
-                  className={`flex items-center gap-1 px-2 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${showTtsSettings
-                    ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/50"
-                    : "bg-white/5 text-slate-400 border border-transparent hover:bg-white/10"
-                    }`}
-                  title="Voice Settings"
-                >
-                  <Settings size={14} />
-                  {showTtsSettings ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                </button>
-              )}
+        {/* Delay Selector */}
+        <div className="flex items-center gap-2">
+          <Clock size={14} className="text-slate-500" />
+          <select
+            value={learnDelay}
+            onChange={(e) => setLearnDelay(parseInt(e.target.value))}
+            className={`select-field ${theme.bg} ${theme.border} text-xs px-2 py-1`}
+          >
+            <option value="1">1s</option>
+            <option value="1.5">1.5s</option>
+            <option value="2">2s</option>
+            <option value="2.5">2.5s</option>
+            <option value="3">3s</option>
+            <option value="3.5">3.5s</option>
+            <option value="4">4s</option>
+            <option value="4.5">4.5s</option>
+            <option value="5">5s</option>
+            <option value="5.5">5.5s</option>
+            <option value="6">6s</option>
+            <option value="6.5">6.5s</option>
+            <option value="7">7s</option>
+            <option value="7.5">7.5s</option>
+            <option value="8">8s</option>
+            <option value="8.5">8.5s</option>
+            <option value="9">9s</option>
+            <option value="9.5">9.5s</option>
+            <option value="10">10s</option>
+          </select>
+        </div>
+      </div>
 
-              {learnAutoPlay && (
-                <div className="flex items-center gap-2 animate-in slide-in-from-left-2 fade-in bg-white/5 px-2 py-1 rounded-lg border border-white/5">
-                  <Clock size={12} className="text-slate-500" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Delay</span>
-                  <input
-                    type="range"
-                    min="1"
-                    max="10"
-                    step="0.5"
-                    value={learnDelay}
-                    onChange={(e) => setLearnDelay(parseFloat(e.target.value))}
-                    className={`w-16 h-1.5 rounded-lg appearance-none cursor-pointer ${theme.bg}`}
-                    style={{ accentColor: theme.accent.replace("bg-", "") }}
-                  />
-                  <span className="text-[10px] font-mono text-slate-300 w-6 text-right">
-                    {learnDelay}s
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={handleLearnClick}
-              className={`w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 ${theme.accent} ${theme.onAccent} rounded-xl font-bold shadow-lg hover:brightness-110 active:scale-95 transition-all`}
-            >
-              <span>{isFlipped ? "Next" : "Flip"}</span>
-              <SkipForward size={16} fill="currentColor" />
-            </button>
-          </div>
-
-          {/* TTS Settings Panel (Collapsible) */}
-          {ttsEnabled && showTtsSettings && (
-            <div className="animate-in slide-in-from-top-2 fade-in border-t border-white/10 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-
-              {/* Front Voice Selector */}
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  🎙️ Front Voice ({frontLang.split("_")[0].toUpperCase()})
-                </label>
-                <select
-                  value={settings?.ttsFrontVoiceURI || ""}
-                  onChange={(e) => updateSetting("ttsFrontVoiceURI", e.target.value)}
-                  className={`px-2 py-1.5 rounded-lg text-xs ${theme.bg} border ${theme.border} text-white bg-opacity-50`}
-                >
-                  <option value="">Default</option>
-                  {frontVoices.length > 0 ? (
-                    frontVoices.map((voice) => (
-                      <option key={voice.voiceURI} value={voice.voiceURI}>
-                        {voice.name}
-                      </option>
-                    ))
-                  ) : (
-                    <option disabled>No voices for {frontLang}</option>
-                  )}
-                </select>
-              </div>
-
-              {/* Back Voice Selector */}
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  🎙️ Back Voice ({backLang.split("_")[0].toUpperCase()})
-                </label>
-                <select
-                  value={settings?.ttsBackVoiceURI || ""}
-                  onChange={(e) => updateSetting("ttsBackVoiceURI", e.target.value)}
-                  className={`px-2 py-1.5 rounded-lg text-xs ${theme.bg} border ${theme.border} text-white bg-opacity-50`}
-                >
-                  <option value="">Default</option>
-                  {backVoices.length > 0 ? (
-                    backVoices.map((voice) => (
-                      <option key={voice.voiceURI} value={voice.voiceURI}>
-                        {voice.name}
-                      </option>
-                    ))
-                  ) : (
-                    <option disabled>No voices for {backLang}</option>
-                  )}
-                </select>
-              </div>
-
-              {/* Pitch Control */}
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  Pitch
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="range"
-                    min="0.1"
-                    max="2"
-                    step="0.1"
-                    value={settings?.ttsPitch || 1.0}
-                    onChange={(e) => updateSetting("ttsPitch", parseFloat(e.target.value))}
-                    className={`flex-1 h-1.5 rounded-lg appearance-none cursor-pointer ${theme.bg}`}
-                  />
-                  <span className="text-xs font-mono text-slate-300 w-8 text-right">
-                    {(settings?.ttsPitch || 1.0).toFixed(1)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Rate Control */}
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  Speed
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="range"
-                    min="0.1"
-                    max="3"
-                    step="0.1"
-                    value={settings?.ttsRate || 0.9}
-                    onChange={(e) => updateSetting("ttsRate", parseFloat(e.target.value))}
-                    className={`flex-1 h-1.5 rounded-lg appearance-none cursor-pointer ${theme.bg}`}
-                  />
-                  <span className="text-xs font-mono text-slate-300 w-8 text-right">
-                    {(settings?.ttsRate || 0.9).toFixed(1)}x
-                  </span>
-                </div>
-              </div>
-
-              {/* Volume Control */}
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  Volume
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.1"
-                    value={settings?.ttsVolume || 1.0}
-                    onChange={(e) => updateSetting("ttsVolume", parseFloat(e.target.value))}
-                    className={`flex-1 h-1.5 rounded-lg appearance-none cursor-pointer ${theme.bg}`}
-                  />
-                  <span className="text-xs font-mono text-slate-300 w-8 text-right">
-                    {Math.round((settings?.ttsVolume || 1.0) * 100)}%
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
+      {orbitCards.length > 0 && (
+        <div className="mt-8 w-full max-w-xl flex justify-center z-20">
+          <button
+            onClick={handleLearnClick}
+            className={`btn-primary w-full sm:w-auto px-8 py-3 ${theme.accent} ${theme.onAccent} shadow-lg`}
+          >
+            <span>{isFlipped ? "Next" : "Flip"}</span>
+            <SkipForward size={16} fill="currentColor" />
+          </button>
         </div>
       )}
     </div>
