@@ -4,6 +4,25 @@ import bodyParser from "body-parser";
 import fs from "fs";
 import path from "path";
 import sqlite3 from "sqlite3";
+import http from "http";
+
+// ─── Promisified HTTP helper (replaces fetch() for Node < 18) ───────────────
+function httpRequest(options, body = null) {
+  return new Promise((resolve, reject) => {
+    const req = http.request(options, (res) => {
+      let data = "";
+      res.on("data", (chunk) => { data += chunk; });
+      res.on("end", () => {
+        try { resolve({ status: res.statusCode, body: JSON.parse(data) }); }
+        catch (e) { resolve({ status: res.statusCode, body: data }); }
+      });
+    });
+    req.on("error", reject);
+    if (body) req.write(body);
+    req.end();
+  });
+}
+
 
 const app = express();
 app.use(cors());
@@ -120,6 +139,31 @@ db.run(`
     vi_VN TEXT,
     de_DE TEXT,
     FOREIGN KEY (story_id) REFERENCES stories(id) ON DELETE CASCADE
+  )
+`);
+
+// Create saved_tests table (generated tests that can be retaken)
+db.run(`
+  CREATE TABLE IF NOT EXISTS saved_tests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    level TEXT NOT NULL,
+    skills TEXT NOT NULL,
+    questions TEXT NOT NULL,
+    ollama_model TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+// Create test_sessions table (one row per attempt at a saved test)
+db.run(`
+  CREATE TABLE IF NOT EXISTS test_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    saved_test_id INTEGER NOT NULL,
+    score INTEGER,
+    max_score INTEGER,
+    answers TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
 
@@ -459,6 +503,148 @@ initDatabase().then(() => {
         } else {
           res.json({ ok: true, id });
         }
+      }
+    );
+  });
+
+  // ========== OLLAMA PROXY ==========
+
+  // List available Ollama models
+  app.get("/api/ollama/models", async (req, res) => {
+    try {
+      const result = await httpRequest({ host: "127.0.0.1", port: 11434, path: "/api/tags", method: "GET" });
+      if (result.status !== 200) return res.status(503).json({ error: "Ollama not running", models: [] });
+      const models = (result.body.models || []).map(m => m.name);
+      res.json({ models });
+    } catch (err) {
+      console.error("Ollama /api/tags error:", err.message);
+      res.status(503).json({ error: "Ollama not running", models: [] });
+    }
+  });
+
+  // Proxy Ollama generate (non-streaming JSON response)
+  app.post("/api/ollama/generate", async (req, res) => {
+    const { model, prompt, system } = req.body;
+    const body = JSON.stringify({ model, prompt, system, stream: false });
+    try {
+      const result = await httpRequest(
+        {
+          host: "127.0.0.1",
+          port: 11434,
+          path: "/api/generate",
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
+        },
+        body
+      );
+      if (result.status !== 200) return res.status(result.status).json({ error: String(result.body) });
+      return res.json(result.body);
+    } catch (err) {
+      console.error("Ollama proxy error:", err.message);
+      res.status(503).json({ error: "Ollama not reachable" });
+    }
+  });
+
+  // ========== SAVED TESTS API ==========
+
+  // Get all saved tests (newest first, with attempt count and best score)
+  app.get("/api/saved-tests", (req, res) => {
+    db.all(
+      `SELECT st.id, st.name, st.level, st.skills, st.ollama_model, st.created_at,
+              COUNT(ts.id) as attempt_count,
+              MAX(CAST(ts.score AS REAL) / NULLIF(ts.max_score, 0) * 100) as best_score
+       FROM saved_tests st
+       LEFT JOIN test_sessions ts ON ts.saved_test_id = st.id
+       GROUP BY st.id
+       ORDER BY st.created_at DESC`,
+      [],
+      (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows || []);
+      }
+    );
+  });
+
+  // Get a single saved test with full questions JSON
+  app.get("/api/saved-tests/:id", (req, res) => {
+    db.get("SELECT * FROM saved_tests WHERE id = ?", [req.params.id], (err, row) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!row) return res.status(404).json({ error: "Test not found" });
+      try {
+        row.questions = JSON.parse(row.questions || "[]");
+        row.skills = JSON.parse(row.skills || "[]");
+      } catch (e) { }
+      res.json(row);
+    });
+  });
+
+  // Save a newly generated test
+  app.post("/api/saved-tests", (req, res) => {
+    const { name, level, skills, questions, ollama_model } = req.body;
+    if (!name || !level || !questions) return res.status(400).json({ error: "Missing required fields" });
+    db.run(
+      "INSERT INTO saved_tests (name, level, skills, questions, ollama_model) VALUES (?, ?, ?, ?, ?)",
+      [name, level, JSON.stringify(skills || []), JSON.stringify(questions), ollama_model || null],
+      function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true, id: this.lastID });
+      }
+    );
+  });
+
+  // Delete a saved test (and cascade delete its sessions)
+  app.delete("/api/saved-tests/:id", (req, res) => {
+    const { id } = req.params;
+    db.run("DELETE FROM test_sessions WHERE saved_test_id = ?", [id], (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      db.run("DELETE FROM saved_tests WHERE id = ?", [id], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        if (this.changes === 0) return res.status(404).json({ error: "Test not found" });
+        res.json({ ok: true });
+      });
+    });
+  });
+
+  // ========== TEST SESSIONS API ==========
+
+  // Get all test sessions (newest first, joined with saved test name)
+  app.get("/api/test-sessions", (req, res) => {
+    db.all(
+      `SELECT ts.*, st.name as test_name, st.level, st.skills
+       FROM test_sessions ts
+       JOIN saved_tests st ON ts.saved_test_id = st.id
+       ORDER BY ts.created_at DESC
+       LIMIT 50`,
+      [],
+      (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows || []);
+      }
+    );
+  });
+
+  // Get all sessions for a specific saved test
+  app.get("/api/test-sessions/for/:savedTestId", (req, res) => {
+    db.all(
+      "SELECT * FROM test_sessions WHERE saved_test_id = ? ORDER BY created_at DESC",
+      [req.params.savedTestId],
+      (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows || []);
+      }
+    );
+  });
+
+  // Save a completed test attempt
+  app.post("/api/test-sessions", (req, res) => {
+    const { saved_test_id, score, max_score, answers } = req.body;
+    if (!saved_test_id) return res.status(400).json({ error: "saved_test_id required" });
+    db.run(
+      "INSERT INTO test_sessions (saved_test_id, score, max_score, answers) VALUES (?, ?, ?, ?)",
+      [saved_test_id, score || 0, max_score || 0, JSON.stringify(answers || [])],
+      function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true, id: this.lastID });
       }
     );
   });

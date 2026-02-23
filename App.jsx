@@ -22,6 +22,9 @@ import StoriesView from "./src/components/StoriesView.jsx";
 import StoriesImportView from "./src/components/StoriesImportView.jsx";
 import StoriesLearnView from "./src/components/StoriesLearnView.jsx";
 import StoriesChallengeView from "./src/components/StoriesChallengeView.jsx";
+import TestView from "./src/components/TestView.jsx";
+import TestSessionView from "./src/components/TestSessionView.jsx";
+import TestResultView from "./src/components/TestResultView.jsx";
 
 
 const App = () => {
@@ -41,6 +44,9 @@ const App = () => {
     if (pathname === "/stories/import") return "stories-import";
     if (pathname.startsWith("/stories/learn/")) return "stories-learn";
     if (pathname.startsWith("/stories/challenge/")) return "stories-challenge";
+    if (pathname === "/test") return "test";
+    if (pathname.startsWith("/test/session/")) return "test-session";
+    if (pathname === "/test/results") return "test-results";
     return "menu";
   };
 
@@ -55,6 +61,14 @@ const App = () => {
     return null;
   };
   const currentStoryId = getStoryIdFromPath(location.pathname);
+
+  // Extract test ID from path for test session view
+  const getTestIdFromPath = (pathname) => {
+    const match = pathname.match(/^\/test\/session\/(\d+)$/);
+    return match ? match[1] : null;
+  };
+  const currentTestId = getTestIdFromPath(location.pathname);
+
 
   // Navigation helper that replaces setView
   const navigateTo = (viewName) => {
@@ -1226,6 +1240,19 @@ const App = () => {
 
         {view === "stories-challenge" && (
           <StoriesChallengeView theme={theme} settings={settings} storyId={currentStoryId} />
+        )}
+
+        {/* Test Mode Views */}
+        {view === "test" && (
+          <TestView theme={theme} masterDeck={masterDeck} settings={settings} />
+        )}
+
+        {view === "test-session" && (
+          <TestSessionView theme={theme} settings={settings} testId={currentTestId} />
+        )}
+
+        {view === "test-results" && (
+          <TestResultView theme={theme} />
         )}
       </main>
       <Footer masterDeckLength={masterDeck.length} theme={theme} />

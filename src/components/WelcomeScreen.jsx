@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { BookOpen, ScrollText, Sparkles } from "lucide-react";
+import { BookOpen, ScrollText, Sparkles, GraduationCap } from "lucide-react";
 
 export default function WelcomeScreen({ theme }) {
     const navigate = useNavigate();
@@ -17,7 +17,7 @@ export default function WelcomeScreen({ theme }) {
                     <Sparkles className="text-amber-400" size={32} />
                 </div>
                 <p className="welcome-hero__subtitle">
-                    Master new languages through vocabulary and immersive stories
+                    Master new languages through vocabulary, immersive stories, and DELE tests
                 </p>
             </div>
 
@@ -35,15 +35,9 @@ export default function WelcomeScreen({ theme }) {
                         Learn words with flashcards. Quick reveal, learn mode, and challenge yourself.
                     </p>
                     <div className="welcome-mode-card__tags">
-                        <span className="welcome-mode-card__tag">
-                            Flashcards
-                        </span>
-                        <span className="welcome-mode-card__tag">
-                            4 Languages
-                        </span>
-                        <span className="welcome-mode-card__tag">
-                            TTS
-                        </span>
+                        <span className="welcome-mode-card__tag">Flashcards</span>
+                        <span className="welcome-mode-card__tag">4 Languages</span>
+                        <span className="welcome-mode-card__tag">TTS</span>
                     </div>
                 </button>
 
@@ -59,23 +53,34 @@ export default function WelcomeScreen({ theme }) {
                         Learn sentences and lyrics line-by-line with a Spotify-style experience.
                     </p>
                     <div className="welcome-mode-card__tags">
-                        <span className="welcome-mode-card__tag">
-                            Lyrics Style
-                        </span>
-                        <span className="welcome-mode-card__tag">
-                            Sentences
-                        </span>
-                        <span className="welcome-mode-card__tag">
-                            Immersive
-                        </span>
+                        <span className="welcome-mode-card__tag">Lyrics Style</span>
+                        <span className="welcome-mode-card__tag">Sentences</span>
+                        <span className="welcome-mode-card__tag">Immersive</span>
+                    </div>
+                </button>
+
+                {/* DELE Test Mode */}
+                <button
+                    onClick={() => navigate("/test")}
+                    className="welcome-mode-card welcome-mode-card--test"
+                >
+                    <div className="welcome-mode-card__glow" />
+                    <GraduationCap className="welcome-mode-card__icon text-violet-400" size={40} />
+                    <h2 className="welcome-mode-card__title">DELE Test</h2>
+                    <p className="welcome-mode-card__description">
+                        AI-powered Spanish proficiency exams. Vocabulary, listening, reading and writing at A1–C2.
+                    </p>
+                    <div className="welcome-mode-card__tags">
+                        <span className="welcome-mode-card__tag">AI Graded</span>
+                        <span className="welcome-mode-card__tag">A1–C2</span>
+                        <span className="welcome-mode-card__tag">4 Skills</span>
                     </div>
                 </button>
             </div>
 
             {/* Footer hint */}
             <p className="welcome-footer">
-                Press <kbd>⌘</kbd> +
-                <kbd>K</kbd> for quick navigation
+                Press <kbd>⌘</kbd> + <kbd>K</kbd> for quick navigation
             </p>
         </div>
     );

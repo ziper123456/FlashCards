@@ -48,13 +48,19 @@
     display: grid;
     grid-template-columns: 1fr;
     gap: 1.5rem;
-    max-width: 42rem;
+    max-width: 62rem;
     width: 100%;
 }
 
 @media (min-width: 640px) {
     .welcome-modes {
         grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .welcome-modes {
+        grid-template-columns: repeat(3, 1fr);
     }
 }
 
@@ -181,4 +187,28 @@
 
 .welcome-footer kbd+kbd {
     margin-left: 0.25rem;
+}
+
+/* DELE Test Card */
+.welcome-mode-card--test {
+    background: linear-gradient(to bottom right, rgba(139, 92, 246, 0.2), rgba(168, 85, 247, 0.2));
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+.welcome-mode-card--test:hover {
+    border-color: rgba(139, 92, 246, 0.6);
+    background: linear-gradient(to bottom right, rgba(139, 92, 246, 0.3), rgba(168, 85, 247, 0.3));
+}
+
+.welcome-mode-card--test .welcome-mode-card__glow {
+    background: rgba(139, 92, 246, 0.1);
+}
+
+.welcome-mode-card--test:hover .welcome-mode-card__glow {
+    background: rgba(139, 92, 246, 0.25);
+}
+
+.welcome-mode-card--test .welcome-mode-card__tag {
+    background: rgba(139, 92, 246, 0.2);
+    color: rgb(196, 181, 253);
 }

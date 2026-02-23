@@ -11,7 +11,10 @@ import {
   Zap,
   Target,
   Home,
+  GraduationCap,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
 
 export default function Header({
   theme,
@@ -28,9 +31,11 @@ export default function Header({
   selectedCategories,
   view,
 }) {
+  const navigate = useNavigate();
   const isVocabularyView = view === "menu" || view === "learn" || view === "import" ||
     view === "play-quick" || view === "play-challenge" || view === "options";
   const isWelcome = view === "welcome";
+
 
   return (
     <header
@@ -74,6 +79,20 @@ export default function Header({
             title="Home"
           >
             <Home size={18} />
+          </button>
+        )}
+
+        {/* Test Mode button */}
+        {!isWelcome && (
+          <button
+            onClick={() => navigate("/test")}
+            className={`btn-compact ${view === "test" || view === "test-session" || view === "test-results"
+              ? `${theme.accent} ${theme.onAccent}`
+              : `${theme.border} text-slate-400 hover:text-white`}`}
+            title="Test Mode"
+          >
+            <GraduationCap size={16} />
+            <span className="hidden sm:inline">Test</span>
           </button>
         )}
 
